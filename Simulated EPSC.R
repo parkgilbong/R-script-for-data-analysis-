@@ -1,6 +1,6 @@
-A <- -600000
-Tau1 <- 0.0005
-Tau2 <- 0.003
+A <- -0.00000001278309 # -12.78309 nS
+Tau1 <- 0.0005 # 0.5 ms
+Tau2 <- 0.003 # 3 ms
 SamplingRate <- 10000
 Duration <- 0.01
 
@@ -27,7 +27,7 @@ generateEPSC <- function(A, Tau1, Tau2, SamplingRate, Duration, RandomFactor) {
     
     t <- seq(from = 0, length.out = SamplingRate*Duration, by = 1/SamplingRate)
     
-    SimulatedEPSC <- (-20)*(-exp(-1/Tau1) + exp(-t/Tau2))
+    SimulatedEPSC <- (A/A_prime)*(-exp(-1/Tau1) + exp(-t/Tau2))
     SimulatedEPSC <- c(0, SimulatedEPSC[-1])
     
     #noise <- runif(length(SimulatedEPSC), -3, 3)

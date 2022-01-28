@@ -1,0 +1,130 @@
+---
+title: "Bar+jitter plot for VOG Baseline data"
+author: "Kim YG"
+date: "10/02/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Generating Bar+Jitter plot using VOG Baseline data
+
+### Loading Packages that we are going to use in this analysis 
+
+**ggplot** and **ggpubr** are used for visualizing our data. **tidyverse** is a specialized package for managing data-set. **Rmisc** is used for calculating descriptive statistics.
+
+```{r}
+library(ggplot2)
+library(tidyverse)
+library(Rmisc)
+library(ggpubr)
+```
+
+### Import dataset
+First, it is necessary to import a dataset from the clipboard. After importing, we will give new column names to the data set and convert two attributes as a factor.   
+
+```{r}
+Gain.table <- read.delim("clipboard", header= F)
+colnames(Gain.table) <- c("AnimalID", "Gain", "Genotype", "Freq")
+Gain.table$Freq <- factor(Gain.table$Freq, levels=c(0.1, 0.25, 0.5, 1.0), order=T)
+Gain.table$Genotype <- factor(Gain.table$Genotype, levels=c("WT", "Het"), order=T)
+Gain.table$FreqGenotype <- interaction(Gain.table$Freq, Gain.table$Genotype)
+head(Gain.table)
+```
+
+### Summarize the dataset
+
+```{r}
+Gain.table.s <- summarySE(Gain.table, measurevar = "Gain", groupvars = c("Freq", "Genotype"))
+Gain.table.s
+```
+
+### Generate Bar plot
+Stimulus frequency should be converted from numeric value to factor.
+
+```{r}
+Gain.table.s2 <- Gain.table.s
+Gain.table.s2$Freq <- factor(Gain.table.s$Freq)
+Gain.table.s2
+```
+
+
+### Generate simple barplot (mean+sem)
+```{r}
+bar <- ggplot(Gain.table.s2, aes(x=Freq, y=Gain, fill=Genotype))
+bar + geom_bar(stat="identity", 
+               position="dodge")+ 
+  geom_errorbar(aes(ymin=Gain-se, ymax=Gain+se), 
+                width=0.2, 
+                position=position_dodge(0.9))
+```
+
+### Generate boxplot+dotplot
+```{r}
+ggplot(aes(y=Gain, x=Freq, fill=Genotype), data=Gain.table)+ 
+  geom_boxplot() + 
+  geom_dotplot(binaxis='y', 
+               stackdir='center', 
+               dotsize=.5, 
+               position=position_dodge(0.75))
+```
+### Generate barplot+Jitterplot
+```{r}
+p <- ggbarplot(Gain.table, 
+          x="Freq", 
+          y="Gain",
+          xlab="Frequency (Hz)",
+          ylab="Gain",
+          ylim=c(0,1.0),
+          width = 0.7,
+          add = c("mean_se", "jitter"), 
+          color="Genotype",
+          palette=c("blue", "red"),
+          position = position_dodge(0.8))
+```
+
+```{r}
+ggplot(Gain.table, 
+       aes(x=Freq, y=Gain)) + 
+  geom_jitter(aes(color=Genotype),
+              position=position_jitter(0.2)) +
+  scale_color_manual(values=c("blue", "red"))
+```
+
+### Perform hypothesis testing
+```{r}
+compare_means(Gain~Genotype, group.by="Freq", data=Gain.table, method="t.test")
+```
+### Add p-values and significance levels
+```{r}
+p + stat_compare_means(aes(group=Genotype), label="p.signif")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

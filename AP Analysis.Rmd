@@ -1,0 +1,101 @@
+---
+title: "Grin2b KI ACC CaMKII-positive neuron excitability"
+author: "KimYG"
+date: "28/01/2022"
+output: html_document
+---
+## Analysis for AP paramenters
+### 0. Load packages
+```{r, message=FALSE, warning=FALSE, results='hide', echo=FALSE}
+library(lme4)
+library(nlme) #for generation of Linear Mixed Model
+library(tidyverse) #for data manipulation and visualization
+library(ggpubr) #for creating easily publication ready plots
+library(rstatix) # provides pipe-friendly R functions for easy statistical analyses
+library(lmerTest)
+library(psycho)
+library(Rmisc) # provides an easy way to Summerize data Mean, SD, SEM
+library(emmeans) #for post hoc pairwise comparison of interaction in Mixed Effects Model)
+library(ggplot2)
+```
+### 1.  Load depolarizing-current injection data from Google drive
+```{r}
+AP <- read.delim(file="H:/My Drive/CSBD life/2_Data/2022/Summary/WT/AP analysis.txt",
+                   header=T,
+                   sep='\t',
+                   stringsAsFactors=T)
+#colnames(table) <- c("id", "AP_Threshold","Velocity_at_threshold", "UpstrokeV", "DownstrokeV", "AP_Amplitude", "AHP_Amplitude", "FWHM", "Rin", "Rheobase_current", "Maximal_firing_step", "FI_slope", "Last_First_ISI")
+AP$group  <- factor("WT")
+AP2 <- read.delim(file="H:/My Drive/CSBD life/2_Data/2022/Summary/KI/AP analysis.txt",
+                   header=T,
+                   sep='\t',
+                   stringsAsFactors=T)
+AP2$group <- factor("KI")
+Whole_AP <- rbind(AP, AP2) ### 2. Combine two data-sets
+str(Whole_AP)
+```
+
+### 2. Discriptive statistics
+```{r, results='hold'}
+temp.data <- list()
+for (n in 2:(length(colnames(Whole_AP))-1)) {
+    temp.data[[colnames(Whole_AP)[n]]] <-summarySE(Whole_AP, measurevar = colnames(Whole_AP)[n], groupvars = "group", na.rm = T)
+    colnames(temp.data[[n-1]]) <- c("Group","N", "mean", "SD", "SEM", "CI")
+    }
+Discriptive.AP <- as.data.frame(do.call(rbind, temp.data))
+print(Discriptive.AP)
+```
+
+```{r}
+t.result <- list()
+for (n in 2:(length(colnames(Whole_AP))-1)) { 
+  
+  df1 <- filter(select(Whole_AP, colnames(Whole_AP)[n], group), group == "WT")
+  colnames(df1) <- c("X", "Label")
+  
+  df2 <- filter(select(Whole_AP, colnames(Whole_AP)[n], group), group == "KI")
+  colnames(df2) <- c("Y", "Label")
+  
+  var.result <- var.test(df1$X, df2$Y) #to evaluate the sample variences of the two groups. If p-value is greater than 0.05, then two variances are homogeneous.
+  t.result[[colnames(Whole_AP)[n]]] <- if(var.result$p.value >= 0.05){
+            t.test(df1$X, df2$Y, alternative = c("two.sided"), paired = F, var.equal = T)
+             } else {
+            t.test(df1$X, df2$Y, alternative = c("two.sided"), paired = F, var.equal = F)    
+             }
+  }
+```
+
+```{r, fig.show='hold', fig.width=TRUE }
+
+for (n in 2:(length(colnames(Whole_AP))-1)) {
+      p <- ggboxplot(Whole_AP, 
+                     x="group", 
+                     y=colnames(Whole_AP)[n], 
+                     xlab="", 
+                     ylab=colnames(Whole_AP)[n], 
+                     #ylim=c(0,200), 
+                     width = 0.3, 
+                     add = "jitter", 
+                     color="group", 
+                     palette="npg"
+                     )
+      p.stat <- p + stat_compare_means(method = "t.test",
+                                       aes(label=paste0("p = ", ..p.format..)),
+                                       label.x.npc = c("right"),
+                                       label.y.npc = c("bottom"))
+      assign(paste0('p',n),p.stat)
+}
+```
+
+```{r, fig.width=TRUE, fig.width=16, fig.height=9, fig.height=TRUE}
+merged.p <- ggarrange(p2,p4,p5,p6,p7,p8,p9,p10,
+          labels = c("a","b","c","d","e","f","h","i"),
+          common.legend = T, legend = "none",
+          hjust = -0.5,
+          vjust = 1.5,
+          widths = c(1,1),
+          heights = c(1,1),
+          ncol=2, nrow=4)
+merged.p
+```
+

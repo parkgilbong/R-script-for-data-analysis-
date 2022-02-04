@@ -1,0 +1,102 @@
+---
+title: "220117_PB_AHP"
+author: "KimYG"
+date: "29/01/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### 0. Load packages
+```{r, message=FALSE, warning=FALSE, results='hide', echo=FALSE}
+library(lme4)
+library(nlme) #for generation of Linear Mixed Model
+library(tidyverse) #for data manipulation and visualization
+library(ggpubr) #for creating easily publication ready plots
+library(rstatix) # provides pipe-friendly R functions for easy statistical analyses
+library(lmerTest)
+library(psycho)
+library(Rmisc) # provides an easy way to Summerize data Mean, SD, SEM
+library(emmeans) # for post hoc pairwise comparison of interaction in Mixed Effects Model
+library(ggplot2) # for generation of plots
+```
+---------
+### 1. Loading depolarizing-current injection data from Google drive and formatting the data
+```{r, echo=FALSE}
+table <- read.delim(file="H:/My Drive/CSBD life/2_Data/2022/Summary/WT/Depol.txt",
+                   header=T,
+                   sep='\t',
+                   stringsAsFactors=T)
+colnames(table) <- c("id", "Baseline","NOS", "MFR", "TD", "PBAHP", "AP_Onset", "Level")
+table$Injected_current <- factor(table$Level,levels(table$Level), label= c(1:12)*50)
+table$group  <- factor("WT")
+head(table)
+```
+
+
+```{r, echo=FALSE}
+table2 <- read.delim(file="H:/My Drive/CSBD life/2_Data/2022/Summary/KI/Depol.txt", 
+                    header=T,
+                    sep='\t',
+                    stringsAsFactors=T)
+colnames(table2) <- c("id", "Baseline","NOS", "MFR", "TD", "PBAHP", "AP_Onset", "Level" )
+table2$Injected_current <- factor(table2$Level,levels(table2$Level), label= c(1:12)*50)
+table2$group <- factor("KI")
+head(table2)
+```
+
+```{r, results='hide', echo=FALSE}
+Whole_data <- rbind(table, table2) ### Combine two data-sets
+str(Whole_data)
+```
+
+### 2. Discriptive statistics
+```{r, results='hold', echo=FALSE}
+Summary.df <- summarySE(Whole_data, measurevar = "PBAHP", groupvars = c("Injected_current", "group"), na.rm = T) #Summerize data Mean, SD, SEM 
+print(Summary.df)
+```
+### 3. Prepare figure
+```{r, echo=FALSE}
+library(ggplot2)
+P <- ggplot(Summary.df, aes(x=Injected_current, y=PBAHP, colour=group, group=group)) + 
+    geom_errorbar(aes(ymin=PBAHP-se, ymax=PBAHP+se), colour="black", width=.2) +
+    geom_line() +
+    geom_point(size=5, shape=21, fill="white") + # 21 is filled circle
+    labs(x="Injected Current (pA)", y="PB-AHP amplitude (mV)", title="") + #Add axis titles
+    scale_colour_hue(name= "",    # Legend label, use darker colors
+                     breaks=c("WT", "KI"),
+                     labels=c("WT", "KI"),
+                     l=40) +                    # Use darker colors, lightness=40
+    expand_limits(y=0:2) +                        # Expand y range
+    scale_y_continuous(breaks=0:20*0.5) +         # Set tick every 5
+    theme_classic(base_size = 11) +
+    theme(legend.justification=c(1,0),
+          legend.position="top",
+          axis.text=element_text(size=10),
+          axis.title=element_text(size=18, face="bold"))               # Position legend in up right
+P
+```
+
+### 4. Generate LInear Mixed Model
+```{r}
+LMM.model <- lme(PBAHP ~ Injected_current*group, 
+                 random = ~1|id, 
+                 data=Whole_data, 
+                 na.action = "na.omit")
+```
+### 5. Tests of Within- and Between-Subjects Effects (Repeated-measures ANOVA) 
+```{r}
+a <- aov(PBAHP~Injected_current+group+group*Injected_current+Error(id), data=Whole_data)
+summary(a)
+```
+```{r}
+anova(LMM.model)
+```
+### 6. Pairwise Comaprison 
+```{r}
+emm <- emmeans(LMM.model, ~ group|Injected_current)
+post.hoc <- pairs(emm, adjust="tukey") #'tukey' is default, 'sidak', 'holm'
+post.hoc
+```

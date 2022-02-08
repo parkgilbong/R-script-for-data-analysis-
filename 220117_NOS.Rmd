@@ -24,11 +24,12 @@ library(Rmisc) # provides an easy way to Summerize data Mean, SD, SEM
 library(emmeans) #for post hoc pairwise comparison of interaction in Mixed Effects Model)
 library(ggplot2)
 ```
--------
+---------
 ## Analysis for depolarizing-current injection data 
 ### 1. Loading depolarizing-current injection data from Google drive and formatting the data
+
 ```{r, echo=FALSE}
-table <- read.delim(file="I:/내 드라이브/CSBD life/2_Data/2022/Summary/WT/Depol.txt",
+table <- read.delim(file="H:/My Drive/CSBD life/2_Data/2022/Summary/WT/Depol.txt",
                    header=T,
                    sep='\t',
                    stringsAsFactors=T)
@@ -37,8 +38,9 @@ table$Injected_current <- factor(table$Level,levels(table$Level), label= c(1:12)
 table$group  <- factor("WT")
 head(table)
 ```
+
 ```{r, echo=FALSE}
-table2 <- read.delim(file="I:/내 드라이브/CSBD life/2_Data/2022/Summary/KI/Depol.txt", 
+table2 <- read.delim(file="H:/My Drive/CSBD life/2_Data/2022/Summary/KI/Depol.txt", 
                     header=T,
                     sep='\t',
                     stringsAsFactors=T)
@@ -62,7 +64,7 @@ print(Summary.df)
 ### 3. Prepare figure
 ```{r, echo=FALSE}
 library(ggplot2)
-ggplot(Summary.df, aes(x=Injected_current, y=NOS, colour=group, group=group)) + 
+ggplot(Summary.df, aes(x=Injected_current, y=NOS, colour=group, palette="npg", group=group)) + 
     geom_errorbar(aes(ymin=NOS-se, ymax=NOS+se), colour="black", width=.2) +
     geom_line() +
     geom_point(size=5, shape=21, fill="white") + # 21 is filled circle
@@ -72,7 +74,7 @@ ggplot(Summary.df, aes(x=Injected_current, y=NOS, colour=group, group=group)) +
                      labels=c("WT", "KI"),
                      l=40) +                    # Use darker colors, lightness=40
     expand_limits(y=2) +                        # Expand y range
-    scale_y_continuous(breaks=0:20*5) +         # Set tick every 2
+    scale_y_continuous(breaks=0:20*5) +         # Set tick every 5
     theme_classic(base_size = 11) +
     theme(legend.justification=c(1,0),
           legend.position="top",
@@ -107,71 +109,6 @@ anova(LMM.model)
 emm <- emmeans(LMM.model, ~ group|Injected_current)
 post.hoc <- pairs(emm, adjust="tukey") #'tukey' is default, 'sidak', 'holm'
 post.hoc
-```
------
-## Analysis for AP paramenters
-### 1.  Load depolarizing-current injection data from Google drive
-```{r}
-AP <- read.delim(file="I:/내 드라이브/CSBD life/2_Data/2022/Summary/WT/AP analysis.txt",
-                   header=T,
-                   sep='\t',
-                   stringsAsFactors=T)
-#colnames(table) <- c("id", "AP_Threshold","Velecity_at_threshold", "UpstrokeV", "DownstrokeV", "AP_Amplitude", "AHP_Amplitude", "FWHM", "Rin", "Rheobase_current", "Maximal_firing_step", "FI_slope", "Last_First_ISI")
-AP$group  <- factor("WT")
-AP2 <- read.delim(file="I:/내 드라이브/CSBD life/2_Data/2022/Summary/KI/AP analysis.txt",
-                   header=T,
-                   sep='\t',
-                   stringsAsFactors=T)
-AP2$group <- factor("KI")
-Whole_AP <- rbind(AP, AP2) ### 2. Combine two data-sets
-str(Whole_AP)
-```
-
-### 2. Discriptive statistics
-```{r, results='hold'}
-temp.data <- list()
-for (n in 2:(length(colnames(Whole_AP))-1)) {
-    temp.data[[colnames(Whole_AP)[n]]] <-summarySE(Whole_AP, measurevar = colnames(Whole_AP)[n], groupvars = "group", na.rm = T)
-    colnames(temp.data[[n-1]]) <- c("Group","N", "mean", "SD", "SEM", "CI")
-    }
-Discriptive.AP <- as.data.frame(do.call(rbind, temp.data))
-print(Discriptive.AP)
-```
-
-```{r}
-t.result <- list()
-for (n in 2:(length(colnames(Whole_AP))-1)) { 
-  
-  df1 <- filter(select(Whole_AP, colnames(Whole_AP)[n], group), group == "WT")
-  colnames(df1) <- c("X", "Label")
-  
-  df2 <- filter(select(Whole_AP, colnames(Whole_AP)[n], group), group == "KI")
-  colnames(df2) <- c("Y", "Label")
-  
-  var.result <- var.test(df1$X, df2$Y) #to evaluate the sample variences of the two groups. If p-value is greater than 0.05, then two variances are homogeneous.
-  t.result[[colnames(Whole_AP)[n]]] <- if(var.result$p.value >= 0.05){
-            t.test(df1$X, df2$Y, alternative = c("two.sided"), paired = F, var.equal = T)
-             } else {
-            t.test(df1$X, df2$Y, alternative = c("two.sided"), paired = F, var.equal = F)    
-             }
-  }
-
-```
-
-```{r}
-p <- ggbarplot(Whole_AP, 
-          x="group", 
-          y="Rin",
-          xlab="",
-          ylab="Input resistance",
-          ylim=c(0,200),
-          width = 0.3,
-          add = c("mean_se", "jitter"), 
-          color="group",
-          #palette=c("blue", "red"),
-          position = position_dodge(0.5))
-compare_means(Rin~group, data=Whole_AP, method="t.test")
-p + stat_compare_means(aes(label = paste0("p = ", ..p.format..)))
 ```
 
 

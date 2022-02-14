@@ -25,7 +25,7 @@ library(ggplot2) # for generation of plots
 ---------
 ### 1. Loading depolarizing-current injection data from Google drive and formatting the data
 ```{r, echo=FALSE}
-table <- read.delim(file="H:/My Drive/CSBD life/2_Data/2022/Summary/WT/Depol.txt",
+table <- read.delim(file="I:/내 드라이브/CSBD life/2_Data/2022/Summary/WT/Depol.txt",
                    header=T,
                    sep='\t',
                    stringsAsFactors=T)
@@ -37,7 +37,7 @@ head(table)
 
 
 ```{r, echo=FALSE}
-table2 <- read.delim(file="H:/My Drive/CSBD life/2_Data/2022/Summary/KI/Depol.txt", 
+table2 <- read.delim(file="I:/내 드라이브/CSBD life/2_Data/2022/Summary/KI/Depol.txt", 
                     header=T,
                     sep='\t',
                     stringsAsFactors=T)

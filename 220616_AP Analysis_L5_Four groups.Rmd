@@ -1,8 +1,11 @@
 ---
-title: "Comparison of intrinsic excitability of mPFC PN between CHD8 genotypes:::Action Potential Analysis"
+title: Comparison of intrinsic excitability of mPFC PN between CHD8 genotypes:::Action
+  Potential Analysis
 author: "KimYG"
-date: "2022 May 22nd"
-output: html_document
+date: "2022 June 17th"
+output:
+  pdf_document: default
+  html_document: default
 ---
 ## Analysis for AP paramenters
 ### 0. Load packages
@@ -20,27 +23,27 @@ library(ggplot2)
 ```
 ### 1.  Load depolarizing-current injection data from Google drive
 ```{r echo=FALSE}
-AP <- read.delim(file="C:/Users/KimYG/Desktop/3. CHD8/Summary/WT_F_L2/AP analysis.txt",
+AP <- read.delim(file="C:/Users/KimYG/Desktop/3. CHD8/IE/Summary/WT_F_L5/AP analysis.txt",
                    header=T,
                    sep='\t',
                    stringsAsFactors=T)
 #colnames(table) <- c("id", "AP_Threshold","Velocity_at_threshold", "UpstrokeV", "DownstrokeV", "AP_Amplitude", "AHP_Amplitude", "FWHM", "Rin", "Rheobase_current", "Maximal_firing_step", "FI_slope", "Last_First_ISI")
-AP$group  <- factor("WT_F_L2")
-AP2 <- read.delim(file="C:/Users/KimYG/Desktop/3. CHD8/Summary/WT_F_L5/AP analysis.txt",
+AP$group  <- factor("WT_F_L5")
+AP2 <- read.delim(file="C:/Users/KimYG/Desktop/3. CHD8/IE/Summary/WT_M_L5/AP analysis.txt",
                    header=T,
                    sep='\t',
                    stringsAsFactors=T)
-AP2$group <- factor("WT_F_L5")
-AP3 <- read.delim(file="C:/Users/KimYG/Desktop/3. CHD8/Summary/KO_F_L2/AP analysis.txt",
+AP2$group <- factor("WT_M_L5")
+AP3 <- read.delim(file="C:/Users/KimYG/Desktop/3. CHD8/IE/Summary/KO_F_L5/AP analysis.txt",
                    header=T,
                    sep='\t',
                    stringsAsFactors=T)
-AP3$group <- factor("KO_F_L2")
-AP4 <- read.delim(file="C:/Users/KimYG/Desktop/3. CHD8/Summary/KO_F_L5/AP analysis.txt",
+AP3$group <- factor("KO_F_L5")
+AP4 <- read.delim(file="C:/Users/KimYG/Desktop/3. CHD8/IE/Summary/KO_M_L5/AP analysis.txt",
                    header=T,
                    sep='\t',
                    stringsAsFactors=T)
-AP4$group <- factor("KO_F_L5")
+AP4$group <- factor("KO_M_L5")
 
 Whole_AP <- rbind(AP, AP2, AP3, AP4) ### 2. Combine two data-sets
 str(Whole_AP)
@@ -61,13 +64,13 @@ print(Discriptive.AP)
 t.result <- list()
 for (n in 2:(length(colnames(Whole_AP))-1)) { 
   
-  df1 <- filter(select(Whole_AP, colnames(Whole_AP)[n], group), group == "WT")
+  df1 <- filter(select(Whole_AP, colnames(Whole_AP)[n], group), group == "WT_F_L5")
   colnames(df1) <- c("X", "Label")
   
-  df2 <- filter(select(Whole_AP, colnames(Whole_AP)[n], group), group == "KI")
+  df2 <- filter(select(Whole_AP, colnames(Whole_AP)[n], group), group == "KO_F_L5")
   colnames(df2) <- c("Y", "Label")
   
-  var.result <- var.test(df1$X, df2$Y) #to evaluate the sample variences of the two groups. If p-value is greater than 0.05, then two variances are homogeneous.
+  var.result <- var.test(df1$X, df2$Y) #to evaluate the sample variances of the two groups. If p-value is greater than 0.05, then two variances are homogeneous.
   t.result[[colnames(Whole_AP)[n]]] <- if(var.result$p.value >= 0.05){
             t.test(df1$X, df2$Y, alternative = c("two.sided"), paired = F, var.equal = T)
              } else {

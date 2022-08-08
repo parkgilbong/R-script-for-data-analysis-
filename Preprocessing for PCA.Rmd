@@ -1,0 +1,108 @@
+---
+title: "Preprocessing for PCA of electrophysiological recordings of CHD8 WT and KO animal"
+author: "KimYG"
+date: "2022 June 21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+
+## Load packagese
+
+```{r message=FALSE, warning=FALSE, include=FALSE, paged.print=TRUE, results='hide'}
+library(tidyverse)
+library(reshape2)
+library(tidyr)
+```
+
+## Load data-set
+
+```{r echo=TRUE}
+DF_H <- read.delim(file="C:/Users/KimYG/Desktop/3. CHD8/IE/Summary/KO_M_L5/Hyperpol.txt",
+                   header=T,
+                   sep='\t',
+                   stringsAsFactors=T)
+colnames(DF_H) <- c("id", "Baseline","PA", "Rinput", "SteadyState", "Sag", "RD", "Level")
+DF_H$Injected_current <- factor(DF_H$Level,levels(DF_H$Level), label= -300+(c(0:5)*50))
+DF_H <- DF_H[,-8]
+
+DF_D <- read.delim(file="C:/Users/KimYG/Desktop/3. CHD8/IE/Summary/KO_M_L5/Depol.txt",
+                   header=T,
+                   sep='\t',
+                   stringsAsFactors=T)
+colnames(DF_D)  <- c("id", "Baseline2","NOS", "MFR", "TD", "PB-AHP", "APonset", "Level")
+DF_D$Injected_current <- factor(DF_D$Level, levels(DF_D$Level), label = c(1:12)*50)
+DF_D <- DF_D[,-8]
+
+DF_AP <- read.delim(file="C:/Users/KimYG/Desktop/3. CHD8/IE/Summary/KO_M_L5/AP analysis.txt",
+                    header = TRUE,
+                    sep = '\t',
+                    stringsAsFactors = T)
+colnames(DF_AP) <- c("id", "AP_threshold", "V_at_Thres", "Upstroke_V", "Downstroke_V", 
+                     "AP_amplitude", "AHP_ampltude", "FWHM", "Rin", "Rheobase", "Max_firing_step", "FI_slope", "ISI_ratio")
+
+head(DF_H)
+head(DF_D)
+head(DF_AP)
+```
+
+## Use reshape2:::melt function to transform from wide to long dataframe
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+m_DF_H <- melt(DF_H, id=c("id", "Injected_current"))
+m_DF_H <- m_DF_H %>% 
+  unite('Merged', Injected_current:variable, remove=TRUE)
+head(m_DF_H)
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+m_DF_D <- melt(DF_D, id=c("id", "Injected_current"))
+m_DF_D <- m_DF_D %>% 
+  unite('Merged', Injected_current:variable, remove=TRUE)
+head(m_DF_D)
+```
+```{r}
+m_DF_AP <- melt(DF_AP, id=c("id"), variable.name = "Merged")
+head(m_DF_AP)
+```
+
+## Combine three melted dataframes
+
+```{r}
+Merged_DF <- rbind(m_DF_H, m_DF_D, m_DF_AP)
+head(Merged_DF)
+```
+
+```{r}
+Merged_DF2 <- separate(Merged_DF, id, sep = "_", into = c("date", "genotype", "sex", "cellnum", "layer"))
+Merged_DF2 <- unite(Merged_DF2, date, genotype, sex, layer, sep = "_", col= Group)
+Merged_DF2 <- Merged_DF2[,-2]
+head(Merged_DF2)
+```
+
+```{r}
+Merged_DF2 %>%
+group_by(Group, Merged) %>%
+summarise(Mean = mean(value))
+```
+
+
+## Use reshape2:::dcast function to transform from long dataframe to wide dataframe
+
+```{r}
+c_DF <- dcast(Merged_DF, id~Merged)
+head(c_DF)
+```
+
+```{r}
+Merged_DF2$Group <- as.factor(Merged_DF2$Group)
+c_DF2 <- dcast(Merged_DF2, Group~Merged, mean)
+head(c_DF2)
+```
+
+```{r}
+write.table(c_DF2, "KO_M_L5.txt", sep = '\t', col.names = TRUE, row.names = F, na = "NA", quote = F)
+```
+

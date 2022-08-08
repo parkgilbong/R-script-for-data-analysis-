@@ -1,0 +1,140 @@
+---
+title: "Comparison of intrinsic excitability of mPFC PN between CHD8 genotypes:::Number of Spike"
+author: "KimYG"
+date: "2022 May 22nd"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### 0. Load packages
+```{r, message=FALSE, warning=FALSE, results='hide', echo=FALSE}
+library(lme4)
+library(nlme) #for generation of Linear Mixed Model
+library(tidyverse) #for data manipulation and visualization
+library(ggpubr) #for creating easily publication ready plots
+library(rstatix) # provides pipe-friendly R functions for easy statistical analyses
+library(lmerTest)
+library(psycho)
+library(Rmisc) # provides an easy way to Summerize data Mean, SD, SEM
+library(emmeans) #for post hoc pairwise comparison of interaction in Mixed Effects Model)
+library(ggplot2)
+```
+---------
+## Analysis for depolarizing-current injection data 
+### 1. Loading depolarizing-current injection data from Google drive and formatting the data
+
+```{r, echo=FALSE}
+table <- read.delim(file="C:/Users/KimYG/Desktop/3. CHD8/Summary/WT_F_L2/Depol.txt",
+                   header=T,
+                   sep='\t',
+                   stringsAsFactors=T)
+colnames(table) <- c("id", "Baseline","NOS", "MFR", "TD", "PBAHP", "AP_Onset", "Level")
+table$Injected_current <- factor(table$Level,levels(table$Level), label= c(1:12)*50)
+table$group  <- factor("WT_F_L2")
+head(table)
+```
+
+```{r, echo=FALSE}
+table2 <- read.delim(file="C:/Users/KimYG/Desktop/3. CHD8/Summary/WT_F_L5/Depol.txt", 
+                    header=T,
+                    sep='\t',
+                    stringsAsFactors=T)
+colnames(table2) <- c("id", "Baseline","NOS", "MFR", "TD", "PBAHP", "AP_Onset", "Level" )
+table2$Injected_current <- factor(table2$Level,levels(table2$Level), label= c(1:12)*50)
+table2$group <- factor("WT_F_L5")
+head(table2)
+```
+
+```{r, echo=FALSE}
+table3 <- read.delim(file="C:/Users/KimYG/Desktop/3. CHD8/Summary/KO_F_L2/Depol.txt", 
+                    header=T,
+                    sep='\t',
+                    stringsAsFactors=T)
+colnames(table3) <- c("id", "Baseline","NOS", "MFR", "TD", "PBAHP", "AP_Onset", "Level" )
+table3$Injected_current <- factor(table3$Level,levels(table3$Level), label= c(1:12)*50)
+table3$group <- factor("KO_F_L2")
+head(table3)
+```
+
+```{r, echo=FALSE}
+table4 <- read.delim(file="C:/Users/KimYG/Desktop/3. CHD8/Summary/KO_F_L5/Depol.txt", 
+                    header=T,
+                    sep='\t',
+                    stringsAsFactors=T)
+colnames(table4) <- c("id", "Baseline","NOS", "MFR", "TD", "PBAHP", "AP_Onset", "Level" )
+table4$Injected_current <- factor(table4$Level,levels(table4$Level), label= c(1:12)*50)
+table4$group <- factor("KO_F_L5")
+head(table4)
+```
+
+
+```{r, results='hide', echo=FALSE}
+Whole_data <- rbind(table, table2, table3, table4) ### 2. Combine two data-sets
+str(Whole_data)
+```
+
+### 2. Discriptive statistics
+```{r, results='hold', echo=FALSE}
+Summary.df <- summarySE(Whole_data, measurevar = "NOS", groupvars = c("Injected_current", "group"), na.rm = T) #Summarize data Mean, SD, SEM 
+print(Summary.df)
+```
+
+### 3. Prepare figure
+```{r, echo=FALSE}
+library(ggplot2)
+ggplot(Summary.df, aes(x=Injected_current, y=NOS, colour=group, palette="npg", group=group)) + 
+    geom_errorbar(aes(ymin=NOS-se, ymax=NOS+se), colour="black", width=.2) +
+    geom_line() +
+    geom_point(size=5, shape=21, fill="white") + # 21 is filled circle
+    labs(x="Injected Current (pA)", y="Number of Spike", title="") + #Add axis titles
+    scale_colour_hue(name= "",    # Legend label, use darker colors
+                     breaks=c("WT_F_L2", "WT_F_L5", "KO_F_L2", "KO_F_L5"),
+                     labels=c("WT_F_L2", "WT_F_L5", "KO_F_L2", "KO_F_L5"),
+                     l=40) +                    # Use darker colors, lightness=40
+    expand_limits(y=2) +                        # Expand y range
+    scale_y_continuous(breaks=0:20*5) +         # Set tick every 5
+    theme_classic(base_size = 11) +
+    theme(legend.justification=c(1,0),
+          legend.position="top",
+          axis.text=element_text(size=10),
+          axis.title=element_text(size=18, face="bold"))               # Position legend in bottom right
+
+# boxplot(MFR ~ Protocol*Group, data = Data.df,
+#        xlab = "Group", ylab = "Input Resistance",
+#        frame = T, col = c("#00AFBB", "#E7B800", "#FC4E07"))
+```
+
+
+### 4. Generate LInear Mixed Model
+```{r}
+LMM.model <- lme(NOS ~ Injected_current*group, 
+                 random = ~1|id, 
+                 data=Whole_data, 
+                 na.action = "na.omit")
+```
+
+### 5. Tests of Within- and Between-Subjects Effects 
+```{r}
+a <- aov(NOS~Injected_current+group+group*Injected_current+Error(id), data=Whole_data)
+summary(a)
+```
+```{r}
+anova(LMM.model)
+```
+
+### 6. Pairwise Comaprison 
+```{r}
+emm <- emmeans(LMM.model, ~ group|Injected_current)
+post.hoc <- pairs(emm, adjust="tukey") #'tukey' is default, 'sidak', 'holm'
+post.hoc
+```
+
+
+
+      
+      

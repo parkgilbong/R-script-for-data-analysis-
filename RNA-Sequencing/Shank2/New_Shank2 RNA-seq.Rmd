@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-
+### Load the packages that I need
 ```{r} 
 library(gplots);
 library(RColorBrewer)
@@ -17,14 +17,18 @@ library(readxl)
 library(tidyverse)
 ```
 
+### Import RNA-Seq data from Yoo et al., 2022
 ```{r}
-dt.new.HM <- read_excel("Supplementary table 1.xlsx", sheet = "Shank2-HM-CTX", range = "A4:S13552")
-dt.new.HT <- read_excel("Supplementary table 1.xlsx", sheet = "Shank2-HT-CTX", range = "A4:R13904")
+dt.new.HM <- read_excel(paste(path.expand('~'),"/GitHub/R_script_for_data_analysis/RNA-Sequencing/Shank2/Supplementary table 1.xlsx", sep = "", collapse = NULL), sheet = "Shank2-HM-CTX", range = "A4:S13552")
+
+dt.new.HT <- read_excel(paste(path.expand('~'),"/GitHub/R_script_for_data_analysis/RNA-Sequencing/Shank2/Supplementary table 1.xlsx", sep = "", collapse = NULL), sheet = "Shank2-HT-CTX", range = "A4:R13904")
+
 #dt.12W.HM[,c(1,3,4,13:16)] <- NULL
 head(dt.new.HT)
 head(dt.new.HM)
 ```
 
+### Merge two, hetero and homo, dataframes 
 ```{r}
 dt.merged <- full_join(dt.new.HT,
                        dt.new.HM,
@@ -37,6 +41,7 @@ dt.merged <- full_join(dt.new.HT,
 head(dt.merged)
 ```
 
+### Remove redundant  data from the combined dataframe
 ```{r}
 dt.merged <- dt.merged %>% mutate(HGNC = coalesce(`HGNC symbol.HM`, `HGNC symbol.HT`),
                      EnsembleID = coalesce(`Ensemble ID.HT`, `Ensemble ID.HM`),
@@ -48,7 +53,11 @@ dt.merged <- dt.merged %>% mutate(HGNC = coalesce(`HGNC symbol.HM`, `HGNC symbol
                      WT5 = coalesce(`Shank2_WT-8_CTX.HT`, `Shank2_WT-8_CTX.HM`),
                      )
 head(dt.merged)
-#dt.Gene.name <- read.delim("Gene name.txt", header = T, col.names= c("EnsembleID", "Full name", "Species"))
+```
+
+
+```{r}
+#dt.Gene.name <- read.delim(paste(path.expand('~'),"/GitHub/R_script_for_data_analysis/RNA-Sequencing/Shank2/Gene name.txt"), header = T, col.names= c("EnsembleID", "Full name", "Species"))
 dt.merged <- left_join(dt.merged, 
           dt.Gene.name, 
           by = "EnsembleID", 
@@ -101,7 +110,7 @@ dt.profile <- dt.merged %>% select("HGNC",
                                 "Shank2_HM-7_CTX"
                                 )
 #write.table(dt.profile, 
-#            file = "New_Shank2_merged_profile.txt", 
+#            file = paste(path.expand('~'),"/GitHub/R_script_for_data_analysis/RNA-Sequencing/Shank2/New_Shank2_merged_profile.txt"), 
 #            na="NA", 
 #            row.names = F, 
 #            col.names = T, 
@@ -109,7 +118,7 @@ dt.profile <- dt.merged %>% select("HGNC",
 #            dec = ".", 
 #            sep = "\t")
 #write.table(dt.stat, 
-#            file = "New_Shank2_merged_stat.txt", 
+#            file = paste(path.expand('~'),"/GitHub/R_script_for_data_analysis/RNA-Sequencing/Shank2/New_Shank2_merged_stat.txt"), 
 #            na="NA", 
 #            row.names= F, 
 #            col.names = T, 

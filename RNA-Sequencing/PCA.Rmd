@@ -1,0 +1,50 @@
+---
+title: "PCA"
+author: "KimYG"
+date: "2022년 6월 21일"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r}
+DF <- read.delim(file="J:/3. CHD8/IE/Summary/WT_F_L2/Hyperpol.txt",
+                   header=T,
+                   sep='\t',
+                   stringsAsFactors=T)
+colnames(DF) <- c("id", "Baseline","PA", "Rinput", "SteadyState", "Sag", "RD", "Level")
+DF$Injected_current <- factor(DF$Level,levels(DF$Level), label= -300+(c(0:5)*50))
+DF <- DF[,-8]
+head(DF)
+```
+
+## Including Plots
+
+
+```{r}
+library(tidyverse)
+library(reshape2)
+library(tidyr)
+```
+
+```{r, echo=FALSE}
+m_DF <- melt(DF, id=c("id", "Injected_current"))
+m_DF <- m_DF %>% 
+  unite('Merged', Injected_current:variable, remove=TRUE)
+m_DF
+```
+
+```{r}
+c_DF <- dcast(m_DF, id~Merged)
+
+c_DF
+```
+
+```{r}
+dcast(m_data, no+day~variable)
+```
+

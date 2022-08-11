@@ -1,0 +1,278 @@
+---
+title: "Revisit new_Shank2 animal's transcriptomic analysis"
+author: "KimYG"
+date: '2022-08-04'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r} 
+library(gplots);
+library(RColorBrewer)
+library(readxl)
+library(tidyverse)
+```
+
+```{r}
+dt.new.HM <- read_excel("Supplementary table 1.xlsx", sheet = "Shank2-HM-CTX", range = "A4:S13552")
+dt.new.HT <- read_excel("Supplementary table 1.xlsx", sheet = "Shank2-HT-CTX", range = "A4:R13904")
+#dt.12W.HM[,c(1,3,4,13:16)] <- NULL
+head(dt.new.HT)
+head(dt.new.HM)
+```
+
+```{r}
+dt.merged <- full_join(dt.new.HT,
+                       dt.new.HM,
+                       by = "Mouse symbol",
+                       copy = FALSE,
+                       suffix = c(".HT", ".HM"),
+                       keep = FALSE,
+                       na_matches = "na"
+                       )
+head(dt.merged)
+```
+
+```{r}
+dt.merged <- dt.merged %>% mutate(HGNC = coalesce(`HGNC symbol.HM`, `HGNC symbol.HT`),
+                     EnsembleID = coalesce(`Ensemble ID.HT`, `Ensemble ID.HM`),
+                     baseMean = coalesce(`baseMean.HT`, `baseMean.HM`),
+                     WT1 = coalesce(`Shank2_WT-1_CTX.HT`, `Shank2_WT-1_CTX.HM`),
+                     WT2 = coalesce(`Shank2_WT-3_CTX.HT`, `Shank2_WT-3_CTX.HM`),
+                     WT3 = coalesce(`Shank2_WT-6_CTX.HT`, `Shank2_WT-6_CTX.HM`),
+                     WT4 = coalesce(`Shank2_WT-7_CTX.HT`, `Shank2_WT-7_CTX.HM`),
+                     WT5 = coalesce(`Shank2_WT-8_CTX.HT`, `Shank2_WT-8_CTX.HM`),
+                     )
+head(dt.merged)
+#dt.Gene.name <- read.delim("Gene name.txt", header = T, col.names= c("EnsembleID", "Full name", "Species"))
+dt.merged <- left_join(dt.merged, 
+          dt.Gene.name, 
+          by = "EnsembleID", 
+          copy = FALSE,
+          suffix = c(".x", ".y"),
+          keep = FALSE,
+          na_matches = "na"
+          )
+```
+
+
+```{r}
+dt.stat <- dt.merged %>% select("HGNC", 
+                                "Mouse symbol",
+                                #"Full.name",
+                                "EnsembleID", 
+                                "baseMean", 
+                                "log2FC.HT", 
+                                "FC.HT", 
+                                "p-value.HT", 
+                                "adjusted p-value.HT", 
+                                "log2FC.HM", 
+                                "FC.HM", 
+                                "p-value.HM", 
+                                "adjusted p-value.HM"
+                                )
+head(dt.stat)
+```
+
+```{r}
+dt.profile <- dt.merged %>% select("HGNC", 
+                                "Mouse symbol",
+                                #"Full.name",
+                                "EnsembleID", 
+                                "baseMean", 
+                                "WT1", 
+                                "WT2", 
+                                "WT3", 
+                                "WT4", 
+                                "WT5", 
+                                "Shank2_HT-1_CTX", 
+                                "Shank2_HT-3_CTX", 
+                                "Shank2_HT-4_CTX",
+                                "Shank2_HT-5_CTX", 
+                                "Shank2_HT-6_CTX", 
+                                "Shank2_HM-2_CTX", 
+                                "Shank2_HM-3_CTX",
+                                "Shank2_HM-4_CTX",
+                                "Shank2_HM-6_CTX",
+                                "Shank2_HM-7_CTX"
+                                )
+#write.table(dt.profile, 
+#            file = "New_Shank2_merged_profile.txt", 
+#            na="NA", 
+#            row.names = F, 
+#            col.names = T, 
+#            quote = F, 
+#            dec = ".", 
+#            sep = "\t")
+#write.table(dt.stat, 
+#            file = "New_Shank2_merged_stat.txt", 
+#            na="NA", 
+#            row.names= F, 
+#            col.names = T, 
+#            quote = F, 
+#            dec = ".", 
+#            sep = "\t")
+colnames(dt.profile) <- c("HGNC", "Mouse symbol", "EnsembleID", "baseMean", "WT1", "WT2", "WT3", "WT4", "WT5",
+                          "HT1", "HT2", "HT3", "HT4", "HT5",
+                          "HM1", "HM2", "HM3", "HM4", "HM5")
+
+head(dt.profile)
+```
+
+
+```{r}
+#save(dt.stat, file = "New.Shank2.RNAseq.stat.rda")
+#save(dt.profile, file = "New.Shank2.RNAseq.profile.rda")
+#load(file="New.Shank2.RNAseq.stat.rda")
+#load(file="New.Shank2.RNAseq.stat.rda")
+```
+
+```{r}
+DEG.HM.New <- dt.stat %>% 
+            filter(`adjusted p-value.HM` <= 0.05) %>% 
+              select("Mouse symbol")
+DEG.HT.New <- dt.stat %>% 
+            filter(`adjusted p-value.HT` <= 0.05) %>% 
+              select("Mouse symbol")
+```
+
+```{r}
+DEG.HM.profile <-  dt.profile %>% 
+                  filter(`Mouse symbol` %in% DEG.HM$`Mouse symbol`) %>% 
+                  select("WT1":"WT5","HM1":"HM5")
+rownames(DEG.HM.profile) <- DEG.HM$`Mouse symbol`
+head(DEG.HM.profile)
+```
+
+```{r}
+New.Merged.DEG.HM.stat <-  dt.stat %>% 
+                  filter(`Mouse symbol` %in% Merged.HM.DEG$`Mouse symbol`) %>% 
+                  select("Mouse symbol", "FC.HM", "adjusted p-value.HM")
+#rownames(DEG.HM.profile) <- DEG.HM$`Mouse symbol`
+New.DEG.class <- rep(1, times = length(DEG.HM$`Mouse symbol`))
+head(New.Merged.DEG.HM.stat)
+```
+
+```{r}
+Final.Merged.DEG.HM.stat <- full_join(Old.Merged.DEG.HM.stat, New.Merged.DEG.HM.stat, by = "Mouse symbol", copy = FALSE, suffix = c(".old", ".new"), keep = FALSE, na_matches ="na")
+head(Final.Merged.DEG.HM.stat)
+write_delim(Final.Merged.DEG.HM.stat, file="Final.Merged.DEG.HM.stat.txt", na="NA")
+```
+
+```{r}
+write_delim(DEG.HM.New, file="DEG.HM.New.txt", na="NA")
+write_delim(DEG.HM.Old, file="DEG.HM.Old.txt", na="NA")
+write_delim(DEG.HT.New, file="DEG.HT.New.txt", na="NA")
+write_delim(DEG.HT.Old, file="DEG.HT.Old.txt", na="NA")
+```
+
+```{r}
+mt.DEG.HM.profile <- as.matrix(DEG.HM.profile)
+Map.DEG.HM <- heatmap.2(mt.DEG.HM.profile, 
+  Rowv = T, 
+  Colv = F,
+  na.rm = TRUE,
+  dendrogram = "row",
+  scale = "row",
+  distfun = function(x) dist(x,method = "euclidean"), #"euclidean", "maximum", "manhattan", "canberra", "binary" or "minkowski" 
+  hclustfun = function(x) hclust(x,method = "average"), #'ward.D', 'ward.D2', 'single', 'complete', 'average', 'mcquitty', 'median' or 'centroid'
+  col = "bluered", 
+  srtCol=45,
+  symm = TRUE,
+  symkey = FALSE,
+  symbreaks = TRUE,
+  breaks = seq(-3, 3, length.out = 13),
+  adjCol=c(1,1), 
+  trace = "none",
+  main = NA,
+  key.title = NA, 
+  keysize = 1.2, 
+  key.xlab = "Z-score", 
+  key.ylab = NA, 
+  density.info = "none",
+  margins = c(5,5),
+  na.color="gray",
+  #sepcolor = "black", 
+  #sepwidth = c(0.01,0.01), 
+  #colsep = c(0:ncol(DEG.HM.profile)),
+  #rowsep = c(0,nrow(DEG.HM.profile)),
+  )
+```
+
+
+ipa_geneset <- read.table("clipboard", sep = "\t", header = FALSE, stringsAsFactors = FALSE)
+
+splited.list <- list()
+for (i in 1:length(ipa_geneset$V1)) {
+    splited.list[[i]] <- strsplit(ipa_geneset[i,1], ",") 
+}
+flatten.list <- unlist(splited.list)
+duplicate.list <- flatten.list[duplicated(flatten.list)]
+non.duplicate.list <- flatten.list[!flatten.list%in%duplicate.list]
+flatten.list <- tolower(flatten.list)
+
+firstup <- function(x) {
+   substr(x, 1, 1) <- toupper(substr(x, 1, 1))
+x
+}
+
+flatten.list <- data.frame(firstup(flatten.list), stringsAsFactors = FALSE)
+colnames(flatten.list) <- c("Gene_name")
+
+
+Synaptic.transmission <- merge(Normalized.value, flatten.list, by = "Gene_name")
+Synaptic.transmission2 <- as.matrix(Synaptic.transmission[,-1])
+rownames(Synaptic.transmission2) <- Synaptic.transmission$Gene_name
+colnames(Synaptic.transmission2) <- colnames(Synaptic.transmission)[-1]
+#dataExpr0 <- read.delim("C:/users/KimYG/Desktop/test11.txt",header = TRUE) ### ?ؽ?Ʈ ???? loading, ?????Է?
+#rownames = dataExpr0[,1] ### 
+#dataExpr0[,1] <- NULL ### delete col #1
+#dataMatrix <- data.matrix(dataExpr0)
+rc <- rainbow(nrow(Synaptic.transmission2), start = 0, end = 1)
+cc <- rainbow(ncol(Synaptic.transmission2), start = 0, end = 1)
+
+###color maping col = colorRampPalette(brewer.pal(9, "RdBu"))(10)
+
+
+### Heatmap ?׸???
+heatmap <- heatmap.2(Synaptic.transmission2, 
+  Rowv = T, 
+  Colv = F,
+  na.rm = TRUE,
+  dendrogram = "row",
+  scale = "none",
+  distfun = dist,
+  hclustfun = hclust, 
+  col = bluered(19) , 
+  srtCol=45,
+  symm = TRUE,
+  symkey = FALSE,
+  symbreaks = TRUE,
+  breaks = seq(0.85, 1.15, length.out = 20),
+  adjCol=c(1,1), 
+  trace = "none",
+  main = NA,
+  key.title = NA, 
+  keysize = 0.5, 
+  key.xlab = "Z-score", 
+  key.ylab = NA, 
+  margins = c(5,5),
+  na.color="gray",
+  sepcolor = "black", 
+  sepwidth = c(0.01,0.01), 
+  colsep = c(0:ncol(Imported.data)),
+  rowsep = c(0,nrow(ipa_geneset)))
+
+data.pca <- prcomp(Synaptic.transmission2, center = T, scale = T)
+
+print(data.pca)
+plot(data.pca, type ="l")
+summary(data.pca)
+
+write.csv(Synaptic.transmission2, file = "C:/Users/KimYG/Desktop/DEPs_List.txt", quote = F)
+
+

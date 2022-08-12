@@ -1,5 +1,5 @@
 ---
-title: "Revisit Shank2 animal's transcriptomic analysis"
+title: "Revisit Shank2 animal's transcriptomic analysis (Lee et al., 2021)"
 author: "KimYG"
 date: '2022-07-19'
 output: html_document
@@ -18,15 +18,15 @@ library(tidyverse)
 ```
 
 ```{r}
-dt.12W.HT <- read_excel("Shank2 RNA-seq result.xlsx", sheet = "12W-HT")
-dt.12W.HM <- read_excel("Shank2 RNA-seq result.xlsx", sheet = "12W-HM")
+dt.12W.HT <- read_excel(paste(path.expand('~'),"/GitHub/R_script_for_data_analysis/RNA-Sequencing/Shank2/Shank2 RNA-seq result.xlsx", sep = ""), sheet = "12W-HT", range = "A4:P10494")
+dt.12W.HM <- read_excel(paste(path.expand('~'),"/GitHub/R_script_for_data_analysis/RNA-Sequencing/Shank2/Shank2 RNA-seq result.xlsx", sep = ""), sheet = "12W-HM", range = "A4:P13294")
 #dt.12W.HM[,c(1,3,4,13:16)] <- NULL
 head(dt.12W.HT)
 head(dt.12W.HM)
 ```
 
 ```{r}
-dt.merged <- full_join(
+dt.merged.old <- full_join(
                       dt.12W.HT,
                       dt.12W.HM,
                       by = "Mouse symbol",
@@ -35,11 +35,11 @@ dt.merged <- full_join(
                       keep = FALSE,
                       na_matches = "na"
                       )
-head(dt.merged)
+head(dt.merged.old)
 ```
 
 ```{r}
-dt.merged <- dt.merged %>% mutate(HGNC = coalesce(`HGNC symbol.HM`, `HGNC symbol.HT`),
+dt.merged.old <- dt.merged.old %>% mutate(HGNC = coalesce(`HGNC symbol.HM`, `HGNC symbol.HT`),
                      EnsembleID = coalesce(`Ensemble ID.HT`, `Ensemble ID.HM`),
                      baseMean = coalesce(baseMean.HT, baseMean.HM),
                      WT1 = coalesce(WT1.HT, WT1.HM),
@@ -49,7 +49,7 @@ dt.merged <- dt.merged %>% mutate(HGNC = coalesce(`HGNC symbol.HM`, `HGNC symbol
                      )
 #dt.Gene.name <- read.delim("Gene name.txt", header = T, col.names= c("EnsembleID", "Full name", "Species"))
 dt.merged <- left_join(dt.merged, 
-          dt.Gene.name, 
+          #dt.Gene.name, 
           by = "EnsembleID", 
           copy = FALSE,
           suffix = c(".x", ".y"),
@@ -60,9 +60,9 @@ dt.merged <- left_join(dt.merged,
 
 
 ```{r}
-dt.stat <- dt.merged %>% select("HGNC", 
+dt.stat.old <- dt.merged.old %>% select("HGNC", 
                                 "Mouse symbol",
-                                "Full.name",
+                                #"Full.name",
                                 "EnsembleID", 
                                 "baseMean", 
                                 "log2FC.HT", 
@@ -74,13 +74,13 @@ dt.stat <- dt.merged %>% select("HGNC",
                                 "p-value.HM", 
                                 "adjusted p-value.HM"
                                 )
-head(dt.stat)
+head(dt.stat.old)
 ```
 
 ```{r}
-dt.profile <- dt.merged %>% select("HGNC", 
+dt.profile.old <- dt.merged.old %>% select("HGNC", 
                                 "Mouse symbol",
-                                "Full.name",
+                                #"Full.name",
                                 "EnsembleID", 
                                 "baseMean", 
                                 "WT1", 
@@ -96,9 +96,9 @@ dt.profile <- dt.merged %>% select("HGNC",
                                 "HM3", 
                                 "HM4"
                                 )
-write.table(dt.profile, file = "12W_merged_profile.txt", na="NA", row.names = F, col.names = T, quote = F, dec = ".", sep = "\t")
-write.table(dt.stat, file = "12W_merged_stat.txt", na="NA", row.names= F, col.names = T, quote = F, dec = ".", sep = "\t")
-head(dt.profile)
+#write.table(dt.profile, file = "12W_merged_profile.txt", na="NA", row.names = F, col.names = T, quote = F, dec = ".", sep = "\t")
+#write.table(dt.stat, file = "12W_merged_stat.txt", na="NA", row.names= F, col.names = T, quote = F, dec = ".", sep = "\t")
+head(dt.profile.old)
 ```
 
 
@@ -110,28 +110,29 @@ head(dt.profile)
 ```
 
 ```{r}
-DEG.HM.Old <- dt.stat %>% 
+DEG.HM.old <- dt.stat.old %>% 
             filter(`adjusted p-value.HM` <= 0.05) %>% 
               select("Mouse symbol")
-DEG.HT.old <- dt.stat %>% 
+DEG.HT.old <- dt.stat.old %>% 
             filter(`adjusted p-value.HT` <= 0.05) %>% 
               select("Mouse symbol")
 ```
 
 ```{r}
-DEG.HM.profile <-  dt.profile %>% 
-                  filter(`Mouse symbol` %in% DEG.HM$`Mouse symbol`) %>% 
-                  select("WT1":"WT4","HM1":"HM4")
-rownames(DEG.HM.profile) <- DEG.HM$`Mouse symbol`
-head(DEG.HM.profile)
+Old.DEG.HM.profile <-  dt.profile.old %>% 
+                  filter(`Mouse symbol` %in% DEG.HM.old$`Mouse symbol`) %>% 
+                  select("Mouse symbol", "WT1":"WT4","HM1":"HM4")
+#rownames(Old.DEG.HM.profile) <- DEG.HM.old$`Mouse symbol`
+head(Old.DEG.HM.profile)
 ```
 
 ```{r}
-Old.Merged.DEG.HM.stat <-  dt.stat %>% 
-                  filter(`Mouse symbol` %in% Merged.HM.DEG$`Mouse symbol`) %>% 
+Old.DEG.HM.stat <-  dt.stat.old %>% 
+                  filter(`Mouse symbol` %in% DEG.HM.old$`Mouse symbol`) %>% 
                   select("Mouse symbol", "FC.HM", "adjusted p-value.HM")
 #rownames(DEG.HM.profile) <- DEG.HM$`Mouse symbol`
-head(Old.Merged.DEG.HM.stat)
+Old.DEG.HM.stat$Class <- rep(1, times = length(DEG.HM.old$`Mouse symbol`))
+head(Old.DEG.HM.stat)
 ```
 
 ```{r}

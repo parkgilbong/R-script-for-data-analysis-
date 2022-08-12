@@ -1,5 +1,5 @@
 ---
-title: "Revisit new_Shank2 animal's transcriptomic analysis"
+title: "Revisit new_Shank2 animal's transcriptomic analysis (Yoo et al., 2022)"
 author: "KimYG"
 date: '2022-08-04'
 output: html_document
@@ -30,7 +30,7 @@ head(dt.new.HM)
 
 ### Merge two, hetero and homo, dataframes 
 ```{r}
-dt.merged <- full_join(dt.new.HT,
+dt.merged.new <- full_join(dt.new.HT,
                        dt.new.HM,
                        by = "Mouse symbol",
                        copy = FALSE,
@@ -38,12 +38,12 @@ dt.merged <- full_join(dt.new.HT,
                        keep = FALSE,
                        na_matches = "na"
                        )
-head(dt.merged)
+head(dt.merged.new)
 ```
 
 ### Remove redundant  data from the combined dataframe
 ```{r}
-dt.merged <- dt.merged %>% mutate(HGNC = coalesce(`HGNC symbol.HM`, `HGNC symbol.HT`),
+dt.merged.new <- dt.merged.new %>% mutate(HGNC = coalesce(`HGNC symbol.HM`, `HGNC symbol.HT`),
                      EnsembleID = coalesce(`Ensemble ID.HT`, `Ensemble ID.HM`),
                      baseMean = coalesce(`baseMean.HT`, `baseMean.HM`),
                      WT1 = coalesce(`Shank2_WT-1_CTX.HT`, `Shank2_WT-1_CTX.HM`),
@@ -52,7 +52,7 @@ dt.merged <- dt.merged %>% mutate(HGNC = coalesce(`HGNC symbol.HM`, `HGNC symbol
                      WT4 = coalesce(`Shank2_WT-7_CTX.HT`, `Shank2_WT-7_CTX.HM`),
                      WT5 = coalesce(`Shank2_WT-8_CTX.HT`, `Shank2_WT-8_CTX.HM`),
                      )
-head(dt.merged)
+head(dt.merged.new)
 ```
 
 
@@ -70,7 +70,7 @@ dt.merged <- left_join(dt.merged,
 
 
 ```{r}
-dt.stat <- dt.merged %>% select("HGNC", 
+dt.stat.new <- dt.merged.new %>% select("HGNC", 
                                 "Mouse symbol",
                                 #"Full.name",
                                 "EnsembleID", 
@@ -84,11 +84,11 @@ dt.stat <- dt.merged %>% select("HGNC",
                                 "p-value.HM", 
                                 "adjusted p-value.HM"
                                 )
-head(dt.stat)
+head(dt.stat.new)
 ```
 
 ```{r}
-dt.profile <- dt.merged %>% select("HGNC", 
+dt.profile.new <- dt.merged.new %>% select("HGNC", 
                                 "Mouse symbol",
                                 #"Full.name",
                                 "EnsembleID", 
@@ -125,11 +125,11 @@ dt.profile <- dt.merged %>% select("HGNC",
 #            quote = F, 
 #            dec = ".", 
 #            sep = "\t")
-colnames(dt.profile) <- c("HGNC", "Mouse symbol", "EnsembleID", "baseMean", "WT1", "WT2", "WT3", "WT4", "WT5",
+colnames(dt.profile.new) <- c("HGNC", "Mouse symbol", "EnsembleID", "baseMean", "WT1", "WT2", "WT3", "WT4", "WT5",
                           "HT1", "HT2", "HT3", "HT4", "HT5",
                           "HM1", "HM2", "HM3", "HM4", "HM5")
 
-head(dt.profile)
+head(dt.profile.new)
 ```
 
 
@@ -141,35 +141,33 @@ head(dt.profile)
 ```
 
 ```{r}
-DEG.HM.New <- dt.stat %>% 
+DEG.HM.New <- dt.stat.new %>% 
             filter(`adjusted p-value.HM` <= 0.05) %>% 
               select("Mouse symbol")
-DEG.HT.New <- dt.stat %>% 
+DEG.HT.New <- dt.stat.new %>% 
             filter(`adjusted p-value.HT` <= 0.05) %>% 
               select("Mouse symbol")
 ```
 
 ```{r}
-DEG.HM.profile <-  dt.profile %>% 
-                  filter(`Mouse symbol` %in% DEG.HM$`Mouse symbol`) %>% 
-                  select("WT1":"WT5","HM1":"HM5")
-rownames(DEG.HM.profile) <- DEG.HM$`Mouse symbol`
-head(DEG.HM.profile)
+New.DEG.HM.profile <-  dt.profile.new %>% 
+                  filter(`Mouse symbol` %in% DEG.HM.New$`Mouse symbol`) %>% 
+                  select("Mouse symbol", "WT1":"WT5","HM1":"HM5")
+#rownames(DEG.HM.profile) <- DEG.HM.New$`Mouse symbol`
+head(New.DEG.HM.profile)
 ```
 
 ```{r}
-New.Merged.DEG.HM.stat <-  dt.stat %>% 
-                  filter(`Mouse symbol` %in% Merged.HM.DEG$`Mouse symbol`) %>% 
+New.DEG.HM.stat <-  dt.stat.new %>% 
+                  filter(`Mouse symbol` %in% DEG.HM.New$`Mouse symbol`) %>% 
                   select("Mouse symbol", "FC.HM", "adjusted p-value.HM")
 #rownames(DEG.HM.profile) <- DEG.HM$`Mouse symbol`
-New.DEG.class <- rep(1, times = length(DEG.HM$`Mouse symbol`))
-head(New.Merged.DEG.HM.stat)
+New.DEG.HM.stat$Class <- rep(1, times = length(DEG.HM.New$`Mouse symbol`))
+head(New.DEG.HM.stat)
 ```
 
 ```{r}
-Final.Merged.DEG.HM.stat <- full_join(Old.Merged.DEG.HM.stat, New.Merged.DEG.HM.stat, by = "Mouse symbol", copy = FALSE, suffix = c(".old", ".new"), keep = FALSE, na_matches ="na")
-head(Final.Merged.DEG.HM.stat)
-write_delim(Final.Merged.DEG.HM.stat, file="Final.Merged.DEG.HM.stat.txt", na="NA")
+
 ```
 
 ```{r}

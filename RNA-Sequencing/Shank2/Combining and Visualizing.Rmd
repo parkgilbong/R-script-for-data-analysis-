@@ -1,0 +1,83 @@
+---
+title: "Combining Old and New dataset and Visualizing the data"
+author: "KimYG"
+date: "2022년 8월 12일"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+Merged.DEG.HM <- bind_rows(DEG.HM.old, DEG.HM.New)
+Merged.DEG.HM <- Merged.DEG.HM %>% distinct()
+
+Old.Merged.stat <-  dt.stat.old %>% 
+                  filter(`Mouse symbol` %in% Merged.DEG.HM$`Mouse symbol`) %>% 
+                  select("Mouse symbol", "FC.HM", "log2FC.HM", "adjusted p-value.HM")
+New.Merged.stat <-  dt.stat.new %>% 
+                  filter(`Mouse symbol` %in% Merged.DEG.HM$`Mouse symbol`) %>% 
+                  select("Mouse symbol", "FC.HM", "log2FC.HM", "adjusted p-value.HM")
+
+
+Merged.DEG.HM.stat <- full_join(Old.Merged.stat, New.Merged.stat, by = "Mouse symbol", copy = FALSE, suffix = c(".old", ".new"), keep = FALSE, na_matches ="na")
+colnames(Merged.DEG.HM.stat) <- c("Mouse symbol", "FC.old", "log2FC.old", "fdr.old", "FC.new", "log2FC.new", "fdr.new")
+head(Merged.DEG.HM.stat)
+```
+
+
+```{r}
+Merged.DEG.HM.stat <- Merged.DEG.HM.stat %>% 
+                      mutate(log10.old = -log10(fdr.old), log10.new = -log10(fdr.new)) %>% 
+                      mutate(in.new = `Mouse symbol` %in% DEG.HM.New$`Mouse symbol`) %>% 
+                      mutate(in.old = `Mouse symbol` %in% DEG.HM.old$`Mouse symbol`) %>% 
+                      mutate(common.elements = in.new + in.old) %>% 
+                      mutate(grouping = case_when(
+                        in.new == TRUE & in.old == TRUE ~ "both", 
+                        in.new == TRUE & in.old == FALSE ~ "new",
+                        in.new == FALSE & in.old == TRUE ~ "old"
+                      )) %>%
+                      mutate(significant.level.old = case_when(
+                        log10.old >= 0 & log10.old < 1 ~ 0, 
+                        log10.old >= 1 & log10.old < 1.30103 ~ 1,
+                        log10.old >= 1.30103 & log10.old < 2 ~ 2,
+                        TRUE ~ 3,
+                      )) %>%
+                      mutate(significant.level.new = case_when(
+                        log10.new >= 0 & log10.new < 1 ~ 0, 
+                        log10.new >= 1 & log10.new < 1.30103 ~ 1,
+                        log10.new >= 1.30103 & log10.new < 2 ~ 2,
+                        TRUE ~ 3,
+                      )) %>%
+                      arrange(grouping) %>% 
+                      select(`Mouse symbol`, 
+                             FC.old, 
+                             log2FC.old, 
+                             fdr.old, 
+                             log10.old, 
+                             significant.level.old,
+                             FC.new, 
+                             log2FC.new, 
+                             fdr.new, 
+                             log10.new,
+                             significant.level.new,
+                             grouping)
+#write_delim(Merged.DEG.HM.stat, file="Merged.DEG.HM.stat.txt", na="NA")
+head(Merged.DEG.HM.stat)
+```
+
+```{r}
+#library(ggplot2)
+ggplot(Merged.DEG.HM.stat,aes(x=Group,y=Gene.name))+
+  geom_point(aes(size=`significance.level`,
+                 color=`log2FC`))+
+  theme_bw()+
+  theme(panel.grid = element_blank(),
+        axis.text.x=element_text(angle=90,hjust = 1,vjust=0.5))+
+  scale_color_gradient(low="lightgrey",high="blue")+
+  labs(x=NULL,y=NULL)+
+  guides(size=guide_legend(order=3))
+```
+
+

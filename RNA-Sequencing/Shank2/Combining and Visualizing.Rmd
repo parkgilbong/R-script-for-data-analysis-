@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
 ```
 
 ```{r}
@@ -40,17 +40,24 @@ Merged.DEG.HM.stat <- Merged.DEG.HM.stat %>%
                       )) %>%
                       mutate(significant.level.old = case_when(
                         log10.old >= 0 & log10.old < 1 ~ 0, 
-                        log10.old >= 1 & log10.old < 1.30103 ~ 1,
-                        log10.old >= 1.30103 & log10.old < 2 ~ 2,
-                        TRUE ~ 3,
+                        log10.old >= 1 & log10.old < 1.30103 ~ 0.5,
+                        log10.old >= 1.30103 & log10.old < 2 ~ 1,
+                        TRUE ~ 1.5,
                       )) %>%
                       mutate(significant.level.new = case_when(
                         log10.new >= 0 & log10.new < 1 ~ 0, 
-                        log10.new >= 1 & log10.new < 1.30103 ~ 1,
-                        log10.new >= 1.30103 & log10.new < 2 ~ 2,
-                        TRUE ~ 3,
+                        log10.new >= 1 & log10.new < 1.30103 ~ 0.5,
+                        log10.new >= 1.30103 & log10.new < 2 ~ 1,
+                        TRUE ~ 1.5,
                       )) %>%
-                      arrange(grouping) %>% 
+                      mutate(labelforplot = case_when(
+                        in.new == TRUE & in.old == TRUE ~ "both", 
+                        in.new == TRUE & log10.old >= 1 & log10.old < 1.30103 ~ "new0",
+                        in.new == TRUE & log10.old >= 0 & log10.old < 1 ~ "new1",
+                        in.old == TRUE & log10.new >= 1 & log10.new < 1.30103 ~ "old0",
+                        in.old == TRUE & log10.new >= 0 & log10.new < 1 ~ "old1"
+                      )) %>%
+                      arrange(grouping, labelforplot) %>% 
                       select(`Mouse symbol`, 
                              FC.old, 
                              log2FC.old, 
@@ -62,22 +69,62 @@ Merged.DEG.HM.stat <- Merged.DEG.HM.stat %>%
                              fdr.new, 
                              log10.new,
                              significant.level.new,
-                             grouping)
-#write_delim(Merged.DEG.HM.stat, file="Merged.DEG.HM.stat.txt", na="NA")
+                             grouping,
+                             labelforplot) 
+Merged.DEG.HM.stat$grouping <-factor(Merged.DEG.HM.stat$grouping, levels = c("both", "new", "old"))
+Merged.DEG.HM.stat$labelforplot <-factor(Merged.DEG.HM.stat$labelforplot, levels = c("both", "new0", "old0", "new1", "old1"))
+#write_tsv(Merged.DEG.HM.stat, 
+#           file = paste(path.expand('~'),"/GitHub/R_script_for_data_analysis/RNA-Sequencing/Shank2/Merged.DEG.HM.stat.txt", sep = ""), 
+#           na="NA"
+#           )
+Merged.DEG.HM.stat <- Merged.DEG.HM.stat %>% arrange(labelforplot, desc(log10.old))
 head(Merged.DEG.HM.stat)
 ```
 
 ```{r}
+#formatted.dt <- data.frame()
+
+formatted.dt <- 
+                  mutate(pivot_longer(Merged.DEG.HM.stat, cols = contains("log2FC."), 
+                                      names_to = c("Variable", "Group"), 
+                                      values_to = "log2FC", 
+                                      names_sep = '\\.')) %>% 
+                  mutate(pivot_longer(Merged.DEG.HM.stat, cols = contains("significant.level."),
+                                      names_to = c("Variable2", "Group2"),
+                                      values_to = "Significance.level", 
+                                      names_sep = '\\.')) %>% 
+                  select("Mouse symbol", "Group", "log2FC", "Significance.level") %>%   
+                  filter(`Mouse symbol` != "Fam205a4")
+
+formatted.dt$`Mouse symbol` <- factor(formatted.dt$`Mouse symbol`, levels = rev(Merged.DEG.HM.stat$`Mouse symbol`))
+head(formatted.dt)
+#write_tsv(formatted.dt, file = paste(path.expand('~'),"/GitHub/R_script_for_data_analysis/RNA-Sequencing/formatted_result.txt", sep = ""), na="NA")
+```
+
+```{r fig.width=3.5, fig.height=49}
 #library(ggplot2)
-ggplot(Merged.DEG.HM.stat,aes(x=Group,y=Gene.name))+
-  geom_point(aes(size=`significance.level`,
+breaks <- c(-2, -1, 0, 1, 2)
+p <- ggplot(formatted.dt,aes(x=`Group`, y=`Mouse symbol`))+
+  geom_point(aes(size=`Significance.level`,
                  color=`log2FC`))+
-  theme_bw()+
-  theme(panel.grid = element_blank(),
-        axis.text.x=element_text(angle=90,hjust = 1,vjust=0.5))+
-  scale_color_gradient(low="lightgrey",high="blue")+
-  labs(x=NULL,y=NULL)+
+  scale_colour_gradient2(breaks = breaks,
+                         low = "blue", 
+                         mid = "white", 
+                         high = "red", 
+                         midpoint = 0, 
+                         space = "Lab", 
+                         na.value = "grey50", 
+                         guide = "colourbar", 
+                         aesthetics = "colour") +
+  scale_size(labels = c("p >= 0.1 ","0.1 < p <= 0.05", "0.05 < p <= 0.01","p < 0.01")) +
+  theme_dark() + 
+  #scale_size(range = c(-2, 2)) + 
+  labs(x=NULL,y=NULL) +
   guides(size=guide_legend(order=3))
+
+p
+
+ggsave("Bubble chart.png", width = 3.5, height = 49)
 ```
 
 
